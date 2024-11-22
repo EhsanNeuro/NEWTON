@@ -1,0 +1,54 @@
+services:
+  bot-app:
+    restart: always
+    container_name: bot-app
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    depends_on:
+      - bot-redis
+      - bot-mysql
+    # volumes:
+    #   - .:/app/
+    ports:
+      - '3000:3000'
+    env_file:
+      - .env
+    networks:
+      - telegram-bot
+  bot-redis:
+    container_name: bot-redis
+    image: redis:7.2.4
+    command: redis-server
+    restart: always
+    volumes:
+      - bot-redis:/var/lib/redis
+    ports:
+      - 127.0.0.1:6380:6379
+    networks:
+      - telegram-bot
+  bot-mysql:
+    container_name: bot-mysql
+    restart: always
+    platform: linux/amd64
+    image: "mysql:8.0.27"
+    volumes:
+      - /var/mysql:/var/lib/mysql
+    environment:
+      - "MYSQL_ROOT_PASSWORD=${DATABASE_PASSWORD}"
+      - "MYSQL_DATABASE=${DATABASE_USER}"
+    ports:
+      - 127.0.0.1:3307:3306
+    cap_add:
+      - SYS_NICE
+    networks:
+      - telegram-bot
+
+networks:
+  telegram-bot:
+    name: 'telegram-bot'
+    driver: bridge
+
+volumes:
+  bot-redis:
+    name: bot-redis

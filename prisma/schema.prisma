@@ -1,0 +1,152 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    Int                  @id @default(autoincrement()) @db.UnsignedInt
+  telegramId            BigInt               @unique @db.UnsignedBigInt
+  firstName             String?              @db.VarChar(128)
+  lastName              String?              @db.VarChar(128)
+  referralToken         String               @unique @db.VarChar(64)
+  ReferralTokenUseCount Int                  @default(0)
+  UserEvent             UserEvent[]
+  UserGame              UserGame[]
+  UserReferralOwner     UserReferral[]       @relation("owner")
+  UserReferralFriend    UserReferral[]       @relation("friend")
+  telegramData          Json?                @db.Json
+  lastLogin             DateTime?            @db.Timestamp()
+  loginStreak           Int                  @default(0) @db.UnsignedInt
+  UserExternalReward    UserExternalReward[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+}
+
+model Game {
+  id            Int            @id @default(autoincrement()) @db.UnsignedInt
+  name          String         @db.VarChar(256)
+  type          String         @db.VarChar(128)
+  iteration     Int            @default(0) @db.UnsignedInt
+  startAt       DateTime       @db.Timestamp()
+  endAt         DateTime       @db.Timestamp()
+  rewardType    String         @db.VarChar(128)
+  UserGame      UserGame[]
+  GamePrizePool GamePrizePool?
+  calcResult    Boolean?       @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+}
+
+model GamePrizePool {
+  id                  Int    @id @default(autoincrement()) @db.UnsignedInt
+  inputStart          Float  @db.Double
+  inputEnd            Float  @db.Double
+  prizePool           Float  @db.Double
+  winnerRewardRatio   Float  @db.Float
+  participationReward Float  @db.Double
+  otherRewardRatio    Float  @db.Double
+  winningResult       Float? @db.Double
+  diff                Float? @db.Double
+  secondToken         Int?   @db.UnsignedInt
+  GameId              Int    @unique @db.UnsignedInt
+  Game                Game   @relation(fields: [GameId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+}
+
+model Event {
+  id               Int         @id @default(autoincrement()) @db.UnsignedInt
+  name             String      @db.VarChar(256)
+  type             String      @db.VarChar(128)
+  shortDescription String?     @db.VarChar(256)
+  longDescription  String?     @db.Text
+  startAt          DateTime    @db.Timestamp()
+  endAt            DateTime    @db.Timestamp()
+  duration         Int?        @db.UnsignedInt()
+  location         String?     @db.VarChar(256)
+  attending_link   String?     @db.VarChar(256)
+  UserEvent        UserEvent[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+}
+
+model UserEvent {
+  id         Int     @id @default(autoincrement()) @db.UnsignedInt
+  email      String  @db.VarChar(256)
+  firstName  String  @db.VarChar(128)
+  lastName   String  @db.VarChar(128)
+  university String? @db.VarChar(255)
+  major      String? @db.VarChar(128)
+  UserId     Int     @db.UnsignedInt
+  User       User    @relation(fields: [UserId], references: [id], onDelete: Cascade)
+  EventId    Int     @db.UnsignedInt
+  Event      Event   @relation(fields: [EventId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+}
+
+model UserGame {
+  id       Int   @id @default(autoincrement()) @db.UnsignedInt
+  UserId   Int   @db.UnsignedInt
+  User     User  @relation(fields: [UserId], references: [id], onDelete: Cascade)
+  GameId   Int   @db.UnsignedInt
+  Game     Game  @relation(fields: [GameId], references: [id], onDelete: Cascade)
+  reward   Int   @default(0) @db.UnsignedInt
+  response Float @db.Double
+  metaData Json? @db.Json
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+}
+
+model UserReferral {
+  id       Int  @id @default(autoincrement()) @db.UnsignedInt
+  OwnerId  Int  @db.UnsignedInt
+  Owner    User @relation("owner", fields: [OwnerId], references: [id], onDelete: Cascade)
+  FriendId Int  @db.UnsignedInt
+  Friend   User @relation("friend", fields: [FriendId], references: [id], onDelete: Cascade)
+  reward   Int  @default(0) @db.UnsignedInt
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  @@unique([OwnerId, FriendId])
+}
+
+model ExternalReward {
+  id                 Int                  @id @default(autoincrement()) @db.UnsignedInt
+  reward             Int                  @default(0) @db.UnsignedInt
+  name               String               @db.VarChar(128)
+  UserExternalReward UserExternalReward[]
+  isActive           Boolean?             @default(true)
+  link               String?              @db.VarChar(255)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+}
+
+model UserExternalReward {
+  id               Int            @id @default(autoincrement()) @db.UnsignedInt
+  UserId           Int            @db.UnsignedInt
+  User             User           @relation(fields: [UserId], references: [id], onDelete: Cascade)
+  ExternalRewardId Int            @db.UnsignedInt
+  ExternalReward   ExternalReward @relation(fields: [ExternalRewardId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+}
